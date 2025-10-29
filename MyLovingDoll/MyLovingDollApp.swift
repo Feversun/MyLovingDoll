@@ -12,7 +12,10 @@ import SwiftData
 struct MyLovingDollApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
-            Item.self,
+            TargetSpec.self,
+            Subject.self,
+            Entity.self,
+            ProcessingTask.self
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
@@ -25,7 +28,7 @@ struct MyLovingDollApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ObjectCampHomeView(modelContext: sharedModelContainer.mainContext)
         }
         .modelContainer(sharedModelContainer)
     }
