@@ -9,6 +9,7 @@ import SwiftUI
 import VisionKit
 import Photos
 import Vision
+import PhotoEffectsKit
 
 @available(iOS 17.0, *)
 struct SubjectAdjustmentView: View {
