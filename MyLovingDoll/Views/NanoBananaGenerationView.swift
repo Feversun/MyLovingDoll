@@ -170,7 +170,7 @@ struct NanoBananaGenerationView: View {
                     .font(.headline)
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(prompt.isEmpty ? Color.gray : Color.blue.gradient)
+                    .background(prompt.isEmpty ? Color.gray.gradient : Color.blue.gradient)
                     .foregroundColor(.white)
                     .cornerRadius(12)
                     .disabled(prompt.isEmpty || isGenerating)
