@@ -7,6 +7,7 @@
 
 import Foundation
 import SwiftData
+import CoreGraphics
 import ObjectRecognitionKit
 
 /// SwiftData Subject → RecognizedSubject 转换
