@@ -20,6 +20,7 @@ struct EntityDetailView: View {
     @State private var showingAllPhotosSheet = false
     @State private var showingMoveSheet = false
     @State private var showingDeleteAlert = false
+    @State private var showingAIGeneration = false
     
     var subjects: [Subject] {
         entity.subjects ?? []
@@ -79,6 +80,17 @@ struct EntityDetailView: View {
                             title: "所有"
                         ) {
                             showingAllPhotosSheet = true
+                        }
+                        
+                        Divider().frame(height: 40)
+                        
+                        // AI 生成
+                        ToolbarButton(
+                            icon: "sparkles",
+                            title: "AI",
+                            color: .purple
+                        ) {
+                            showingAIGeneration = true
                         }
                         
                         Divider().frame(height: 40)
@@ -155,6 +167,11 @@ struct EntityDetailView: View {
         .fullScreenCover(isPresented: $showingAdjustmentView) {
             if #available(iOS 17.0, *), let specId = entity.targetSpec?.specId, let subject = currentSubject {
                 SubjectAdjustmentView(subject: subject, specId: specId)
+            }
+        }
+        .sheet(isPresented: $showingAIGeneration) {
+            if let specId = entity.targetSpec?.specId {
+                NanoBananaGenerationView(entity: entity, specId: specId)
             }
         }
     }
