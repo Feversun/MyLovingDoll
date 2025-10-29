@@ -1,0 +1,24 @@
+{
+  "originHash" : "222f957e5d64de390baf69b960986dcbf105f7945967576f183359f769b4c41b",
+  "pins" : [
+    {
+      "identity" : "objectrecognitionkit",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/Feversun/ObjectRecognitionKit",
+      "state" : {
+        "branch" : "main",
+        "revision" : "fc2fcdb3ad5737f36f5acd07426835e2192235c9"
+      }
+    },
+    {
+      "identity" : "photoeffectskit",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/Feversun/PhotoEffectsKit",
+      "state" : {
+        "branch" : "main",
+        "revision" : "e89e52f923282089bb68c5fc3b5cde78d3c5e0f7"
+      }
+    }
+  ],
+  "version" : 3
+}

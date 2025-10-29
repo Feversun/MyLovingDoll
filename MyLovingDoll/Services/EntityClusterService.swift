@@ -7,7 +7,8 @@
 
 import Foundation
 import SwiftData
-import Vision
+import Accelerate
+import ObjectRecognitionKit
 import Combine
 
 @MainActor

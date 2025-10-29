@@ -6,6 +6,11 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		CC85E6DB2EB25E5200C20B2B /* PhotoEffectsKit in Frameworks */ = {isa = PBXBuildFile; productRef = CC85E6DA2EB25E5200C20B2B /* PhotoEffectsKit */; };
+		CC85E6DE2EB2622E00C20B2B /* ObjectRecognitionKit in Frameworks */ = {isa = PBXBuildFile; productRef = CC85E6DD2EB2622E00C20B2B /* ObjectRecognitionKit */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		CC394EDD2EB1F5F500EA05BE /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -52,6 +57,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CC85E6DE2EB2622E00C20B2B /* ObjectRecognitionKit in Frameworks */,
+				CC85E6DB2EB25E5200C20B2B /* PhotoEffectsKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -78,6 +85,7 @@
 				CC394ECF2EB1F5F400EA05BE /* MyLovingDoll */,
 				CC394EDF2EB1F5F500EA05BE /* MyLovingDollTests */,
 				CC394EE92EB1F5F500EA05BE /* MyLovingDollUITests */,
+				CC85E6D92EB25E5200C20B2B /* Frameworks */,
 				CC394ECE2EB1F5F400EA05BE /* Products */,
 			);
 			sourceTree = "<group>";
@@ -90,6 +98,13 @@
 				CC394EE62EB1F5F500EA05BE /* MyLovingDollUITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		CC85E6D92EB25E5200C20B2B /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -112,6 +127,8 @@
 			);
 			name = MyLovingDoll;
 			packageProductDependencies = (
+				CC85E6DA2EB25E5200C20B2B /* PhotoEffectsKit */,
+				CC85E6DD2EB2622E00C20B2B /* ObjectRecognitionKit */,
 			);
 			productName = MyLovingDoll;
 			productReference = CC394ECD2EB1F5F400EA05BE /* MyLovingDoll.app */;
@@ -195,6 +212,10 @@
 			);
 			mainGroup = CC394EC42EB1F5F400EA05BE;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				CC394F702EB25DB200EA05BE /* XCRemoteSwiftPackageReference "PhotoEffectsKit" */,
+				CC85E6DC2EB2622400C20B2B /* XCRemoteSwiftPackageReference "ObjectRecognitionKit" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = CC394ECE2EB1F5F400EA05BE /* Products */;
 			projectDirPath = "";
@@ -584,6 +605,38 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		CC394F702EB25DB200EA05BE /* XCRemoteSwiftPackageReference "PhotoEffectsKit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/Feversun/PhotoEffectsKit";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
+		CC85E6DC2EB2622400C20B2B /* XCRemoteSwiftPackageReference "ObjectRecognitionKit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/Feversun/ObjectRecognitionKit";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		CC85E6DA2EB25E5200C20B2B /* PhotoEffectsKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CC394F702EB25DB200EA05BE /* XCRemoteSwiftPackageReference "PhotoEffectsKit" */;
+			productName = PhotoEffectsKit;
+		};
+		CC85E6DD2EB2622E00C20B2B /* ObjectRecognitionKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CC85E6DC2EB2622400C20B2B /* XCRemoteSwiftPackageReference "ObjectRecognitionKit" */;
+			productName = ObjectRecognitionKit;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = CC394EC52EB1F5F400EA05BE /* Project object */;
 }

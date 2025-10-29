@@ -11,6 +11,7 @@ import Vision
 import Photos
 import SwiftData
 import Combine
+import ObjectRecognitionKit
 
 @MainActor
 class ObjectCaseService: ObservableObject {
@@ -126,95 +127,17 @@ class ObjectCaseService: ObservableObject {
         try modelContext.save()
     }
     
-    /// 使用 Vision 提取主体
+    /// 使用 Vision 提取主体 (使用 ObjectRecognitionKit)
     private func extractSubjectsUsingVision(from image: UIImage) async throws -> [(UIImage, Double, CGRect)] {
-        guard let cgImage = image.cgImage else {
-            throw NSError(domain: "ObjectCamp", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid image"])
-        }
-        
-        let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
-        
-        return try await withCheckedThrowingContinuation { continuation in
-            let request = VNGenerateForegroundInstanceMaskRequest { request, error in
-                if let error = error {
-                    continuation.resume(throwing: error)
-                    return
-                }
-                
-                guard let results = request.results as? [VNInstanceMaskObservation] else {
-                    continuation.resume(returning: [])
-                    return
-                }
-                
-                var subjects: [(UIImage, Double, CGRect)] = []
-                
-                for observation in results {
-                    do {
-                        let maskedPixelBuffer = try observation.generateMaskedImage(
-                            ofInstances: observation.allInstances,
-                            from: handler,
-                            croppedToInstancesExtent: true
-                        )
-                        
-                        let ciImage = CIImage(cvPixelBuffer: maskedPixelBuffer)
-                        let context = CIContext()
-                        if let cgImage = context.createCGImage(ciImage, from: ciImage.extent) {
-                            let uiImage = UIImage(cgImage: cgImage)
-                            subjects.append((
-                                uiImage,
-                                Double(observation.confidence),
-                                ciImage.extent
-                            ))
-                        }
-                    } catch {
-                        print("Failed to generate masked image: \(error)")
-                    }
-                }
-                
-                continuation.resume(returning: subjects)
-            }
-            
-            do {
-                try handler.perform([request])
-            } catch {
-                continuation.resume(throwing: error)
-            }
-        }
+        let recognitionService = SubjectRecognitionService()
+        let results = try await recognitionService.recognizeSubjects(from: image)
+        return results
     }
     
-    /// 提取特征向量
+    /// 提取特征向量 (使用 ObjectRecognitionKit)
     private func extractFeatureVector(from image: UIImage) async throws -> [Float] {
-        guard let cgImage = image.cgImage else {
-            throw NSError(domain: "ObjectCamp", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid image"])
-        }
-        
-        return try await withCheckedThrowingContinuation { continuation in
-            let request = VNGenerateImageFeaturePrintRequest { request, error in
-                if let error = error {
-                    continuation.resume(throwing: error)
-                    return
-                }
-                
-                guard let observation = request.results?.first as? VNFeaturePrintObservation else {
-                    continuation.resume(throwing: NSError(domain: "ObjectCamp", code: -1, userInfo: [NSLocalizedDescriptionKey: "No feature print"]))
-                    return
-                }
-                
-                let featureData = observation.data
-                let floatArray = featureData.withUnsafeBytes { pointer in
-                    Array(pointer.bindMemory(to: Float.self))
-                }
-                
-                continuation.resume(returning: floatArray)
-            }
-            
-            let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
-            do {
-                try handler.perform([request])
-            } catch {
-                continuation.resume(throwing: error)
-            }
-        }
+        let recognitionService = SubjectRecognitionService()
+        return try await recognitionService.extractFeatureVector(from: image)
     }
     
     /// 从 PHAsset 加载图片
