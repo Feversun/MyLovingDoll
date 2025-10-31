@@ -268,7 +268,7 @@ final class NanoBananaService {
                 print("[NanoBanana] ❌ 没有找到 inlineData")
                 
                 // 检查是否返回了纯文本
-                if let textPart = content.parts.first(where: { $0.text != nil }) {
+                if content.parts.first(where: { $0.text != nil }) != nil {
                     print("[NanoBanana] 📝 模型返回了文本而不是图片")
                     throw NSError(domain: "NanoBananaError", code: -2, userInfo: [
                         NSLocalizedDescriptionKey: "模型返回了文本说明而不是图片，请尝试更明确的提示词或更换图片"

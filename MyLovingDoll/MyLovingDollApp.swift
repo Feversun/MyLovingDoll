@@ -15,7 +15,8 @@ struct MyLovingDollApp: App {
             TargetSpec.self,
             Subject.self,
             Entity.self,
-            ProcessingTask.self
+            ProcessingTask.self,
+            StoryInstance.self
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
@@ -28,7 +29,7 @@ struct MyLovingDollApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ObjectCampHomeView(modelContext: sharedModelContainer.mainContext)
+            MainTabView()
         }
         .modelContainer(sharedModelContainer)
     }
