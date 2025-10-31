@@ -21,6 +21,7 @@ struct EntityDetailView: View {
     @State private var showingMoveSheet = false
     @State private var showingDeleteAlert = false
     @State private var showingAIGeneration = false
+    @State private var showingVideoGeneration = false
     
     var subjects: [Subject] {
         entity.subjects ?? []
@@ -84,13 +85,24 @@ struct EntityDetailView: View {
                         
                         Divider().frame(height: 40)
                         
-                        // AI 生成
+                        // AI 图片
                         ToolbarButton(
                             icon: "sparkles",
-                            title: "AI",
+                            title: "AI图",
                             color: .purple
                         ) {
                             showingAIGeneration = true
+                        }
+                        
+                        Divider().frame(height: 40)
+                        
+                        // AI 视频
+                        ToolbarButton(
+                            icon: "video.badge.waveform",
+                            title: "视频",
+                            color: .orange
+                        ) {
+                            showingVideoGeneration = true
                         }
                         
                         Divider().frame(height: 40)
@@ -173,6 +185,9 @@ struct EntityDetailView: View {
             if let specId = entity.targetSpec?.specId {
                 NanoBananaGenerationView(entity: entity, specId: specId)
             }
+        }
+        .sheet(isPresented: $showingVideoGeneration) {
+            Veo3GenerationView()
         }
     }
     

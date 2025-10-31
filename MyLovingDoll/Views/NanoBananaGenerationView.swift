@@ -8,6 +8,15 @@
 import SwiftUI
 import PhotosUI
 
+// MARK: - 生成历史记录
+struct GenerationHistory: Identifiable {
+    let id = UUID()
+    let image: UIImage
+    let prompt: String
+    let mode: String
+    let timestamp: Date
+}
+
 struct NanoBananaGenerationView: View {
     @Environment(\.dismiss) var dismiss
     
@@ -21,6 +30,9 @@ struct NanoBananaGenerationView: View {
     @State private var errorMessage: String?
     @State private var showingPhotoPicker = false
     @State private var photoPickerItems: [PhotosPickerItem] = []
+    
+    // 历史记录
+    @State private var generationHistory: [GenerationHistory] = []
     
     // 主体图片(默认第一张)
     var subjectImage: UIImage? {
@@ -178,7 +190,7 @@ struct NanoBananaGenerationView: View {
                     // 生成结果
                     if let generatedImage = generatedImage {
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("生成结果")
+                            Text("最新生成")
                                 .font(.headline)
                             
                             Image(uiImage: generatedImage)
@@ -214,6 +226,27 @@ struct NanoBananaGenerationView: View {
                                 }
                             }
                         }
+                    }
+                    
+                    // 历史记录
+                    if !generationHistory.isEmpty {
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                Text("生成历史")
+                                    .font(.headline)
+                                Spacer()
+                                Text("共 \(generationHistory.count) 条")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            
+                            ForEach(generationHistory) { history in
+                                HistoryCard(history: history,
+                                          onSave: { saveToPhotos(history.image) },
+                                          onShare: { shareImage(history.image) })
+                            }
+                        }
+                        .padding(.top, 8)
                     }
                     
                     // 错误提示
@@ -271,34 +304,53 @@ struct NanoBananaGenerationView: View {
     }
     
     private func generateImage() async {
+        print("[UI] 🚀 开始生成图片...")
+        print("[UI] 图片数量: \(allImages.count)")
+        print("[UI] 提示词: \(prompt)")
+        
         isGenerating = true
         errorMessage = nil
         
         do {
+            print("[UI] 🔑 从 Keychain 读取 API Key...")
             let service = try NanoBananaService.fromKeychain()
+            print("[UI] ✅ API Key 读取成功")
+            
             let result: UIImage
             
             // 根据图片数量选择 API
             switch allImages.count {
             case 0:
-                // 纯文本生成
+                print("[UI] 📝 模式: 纯文本生成")
                 result = try await service.generateImage(prompt: prompt)
                 
             case 1:
-                // 单图编辑
+                print("[UI] 🎨 模式: 单图编辑")
                 result = try await service.editImage(prompt: prompt, baseImage: allImages[0])
                 
             default:
-                // 多图合成
+                print("[UI] 🖼️ 模式: 多图合成 (\(allImages.count)张)")
                 result = try await service.composeImage(prompt: prompt, baseImages: allImages)
             }
             
+            print("[UI] ✅ 图片生成成功!")
+            
             await MainActor.run {
+                // 保存到历史记录
+                let history = GenerationHistory(
+                    image: result,
+                    prompt: prompt,
+                    mode: generationMode,
+                    timestamp: Date()
+                )
+                generationHistory.insert(history, at: 0)
+                
                 generatedImage = result
                 isGenerating = false
             }
             
         } catch {
+            print("[UI] ❌ 错误: \(error)")
             await MainActor.run {
                 if error.localizedDescription.contains("itemNotFound") {
                     errorMessage = "请先在设置中配置 API Key"
@@ -388,5 +440,78 @@ struct QuickPromptButton: View {
                 .foregroundColor(.blue)
                 .cornerRadius(16)
         }
+    }
+}
+
+// MARK: - 历史记录卡片
+struct HistoryCard: View {
+    let history: GenerationHistory
+    let onSave: () -> Void
+    let onShare: () -> Void
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            // 时间和模式
+            HStack {
+                Image(systemName: "clock")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Text(history.timestamp, style: .relative)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                
+                Spacer()
+                
+                Text(history.mode)
+                    .font(.caption2)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.blue.opacity(0.1))
+                    .foregroundColor(.blue)
+                    .cornerRadius(8)
+            }
+            
+            // 提示词
+            Text(history.prompt)
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .lineLimit(2)
+            
+            // 图片
+            Image(uiImage: history.image)
+                .resizable()
+                .scaledToFit()
+                .cornerRadius(8)
+            
+            // 操作按钮
+            HStack(spacing: 8) {
+                Button {
+                    onSave()
+                } label: {
+                    Label("保存", systemImage: "square.and.arrow.down")
+                        .font(.caption)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .background(Color.green.opacity(0.1))
+                        .foregroundColor(.green)
+                        .cornerRadius(6)
+                }
+                
+                Button {
+                    onShare()
+                } label: {
+                    Label("分享", systemImage: "square.and.arrow.up")
+                        .font(.caption)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .background(Color.blue.opacity(0.1))
+                        .foregroundColor(.blue)
+                        .cornerRadius(6)
+                }
+            }
+        }
+        .padding()
+        .background(Color(.systemGray6))
+        .cornerRadius(12)
     }
 }

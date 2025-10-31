@@ -289,9 +289,25 @@ struct ObjectCampHomeView: View {
 struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var showingClearAlert = false
+    @State private var showingAPIKeySettings = false
     
     var body: some View {
         List {
+            Section("AI 功能") {
+                Button {
+                    showingAPIKeySettings = true
+                } label: {
+                    HStack {
+                        Label("Gemini API 设置", systemImage: "sparkles")
+                        Spacer()
+                        if KeychainService.shared.hasGeminiAPIKey {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(.green)
+                        }
+                    }
+                }
+            }
+            
             Section("数据管理") {
                 Button(role: .destructive) {
                     showingClearAlert = true
@@ -310,6 +326,9 @@ struct SettingsView: View {
             }
         }
         .navigationTitle("设置")
+        .sheet(isPresented: $showingAPIKeySettings) {
+            APIKeySettingsView()
+        }
         .alert("确认清空", isPresented: $showingClearAlert) {
             Button("取消", role: .cancel) {}
             Button("清空", role: .destructive) {
