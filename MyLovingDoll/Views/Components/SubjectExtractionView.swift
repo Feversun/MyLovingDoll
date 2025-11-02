@@ -37,7 +37,10 @@ struct SubjectExtractionView: View {
                             Image(uiImage: cropped)
                                 .resizable()
                                 .aspectRatio(contentMode: .fit)
-                                .customDisintegrationEffect(isDeleted: triggerDisintegration) {
+                                .customDisintegrationEffect(
+                                    isDeleted: triggerDisintegration,
+                                    config: .heartFloat  // 使用爱心飘散模板
+                                ) {
                                     // 动画完成后放大主体
                                     withAnimation(.spring(response: 0.6, dampingFraction: 0.7)) {
                                         showSubject = true

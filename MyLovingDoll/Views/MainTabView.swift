@@ -43,6 +43,10 @@ struct MainTabView: View {
                     Label("画布", systemImage: "rectangle.on.rectangle.angled")
                 }
         }
+        .onAppear {
+            // App 启动时立即触发网络权限弹窗
+            NetworkPermissionWarmer.warmUp()
+        }
     }
 }
 
