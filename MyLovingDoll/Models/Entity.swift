@@ -38,6 +38,28 @@ final class Entity {
     /// 平均置信度
     var averageConfidence: Double
     
+    // MARK: - 个性化特征
+    /// 生日
+    var birthday: Date?
+    
+    /// 性格特征（如：活泼、温柔、勇敢等）
+    var personality: String?
+    
+    /// 爱好列表（JSON字符串存储）
+    var hobbies: String?
+    
+    /// 故事背景/描述
+    var backgroundStory: String?
+    
+    /// 外貌描述
+    var appearance: String?
+    
+    /// 特殊技能/能力
+    var specialAbilities: String?
+    
+    /// 关系/身份（如：我的女儿、我的朋友等）
+    var relationship: String?
+    
     init(targetSpec: TargetSpec?, isManuallyCreated: Bool = false) {
         self.id = UUID()
         self.createdAt = Date()

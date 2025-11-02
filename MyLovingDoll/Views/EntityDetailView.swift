@@ -15,6 +15,7 @@ struct EntityDetailView: View {
     
     @Query private var allStories: [StoryInstance]
     
+    @State private var showingProfileEdit = false
     @State private var showingRenameDialog = false
     @State private var newName = ""
     @State private var currentIndex = 0
@@ -236,8 +237,7 @@ struct EntityDetailView: View {
             
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
-                    newName = entity.customName ?? ""
-                    showingRenameDialog = true
+                    showingProfileEdit = true
                 } label: {
                     Image(systemName: "pencil.circle.fill")
                         .foregroundStyle(.pink.gradient)
@@ -298,6 +298,9 @@ struct EntityDetailView: View {
         }
         .sheet(isPresented: $showingStoryBookPicker) {
             StoryBookPickerSheet(entity: entity)
+        }
+        .sheet(isPresented: $showingProfileEdit) {
+            EntityProfileView(entity: entity)
         }
     }
     

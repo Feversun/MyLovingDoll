@@ -25,6 +25,7 @@ struct NanoBananaGenerationView: View {
     
     @State private var prompt: String = ""
     @State private var selectedImages: [UIImage] = []
+    @State private var hasGeneratedInitialPrompt = false
     @State private var isGenerating = false
     @State private var generatedImage: UIImage?
     @State private var errorMessage: String?
@@ -127,8 +128,18 @@ struct NanoBananaGenerationView: View {
                     
                     // 提示词输入
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("提示词")
-                            .font(.headline)
+                        HStack {
+                            Text("提示词")
+                                .font(.headline)
+                            Spacer()
+                            Button {
+                                generateInitialPrompt()
+                            } label: {
+                                Label("智能生成", systemImage: "wand.and.stars")
+                                    .font(.caption)
+                                    .foregroundColor(.purple)
+                            }
+                        }
                         
                         TextEditor(text: $prompt)
                             .frame(height: 120)
@@ -281,6 +292,13 @@ struct NanoBananaGenerationView: View {
                     await loadPhotos(from: newItems)
                 }
             }
+            .onAppear {
+                // 首次打开时自动生成基础prompt
+                if !hasGeneratedInitialPrompt {
+                    generateInitialPrompt()
+                    hasGeneratedInitialPrompt = true
+                }
+            }
         }
     }
     
@@ -289,6 +307,19 @@ struct NanoBananaGenerationView: View {
         if count == 0 { return "wand.and.stars" }
         else if count == 1 { return "photo.badge.arrow.down" }
         else { return "rectangle.3.group" }
+    }
+    
+    private func generateInitialPrompt() {
+        // 使用PromptManager生成基于Entity特征的prompt
+        let basePrompt = PromptManager.shared.generatePrompt(
+            for: entity,
+            scene: .imageGeneration
+        )
+        
+        // 如果当前prompt为空或者就是之前的自动生成，才替换
+        if prompt.isEmpty {
+            prompt = basePrompt
+        }
     }
     
     private func loadPhotos(from items: [PhotosPickerItem]) async {

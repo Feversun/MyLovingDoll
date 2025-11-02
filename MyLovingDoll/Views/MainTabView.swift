@@ -30,6 +30,12 @@ struct MainTabView: View {
                 .tabItem {
                     Label("我的故事", systemImage: "book.pages.fill")
                 }
+            
+            // Tab 4: 画布
+            CanvasListView()
+                .tabItem {
+                    Label("画布", systemImage: "rectangle.on.rectangle.angled")
+                }
         }
     }
 }

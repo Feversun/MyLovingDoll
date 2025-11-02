@@ -16,7 +16,9 @@ struct MyLovingDollApp: App {
             Subject.self,
             Entity.self,
             ProcessingTask.self,
-            StoryInstance.self
+            StoryInstance.self,
+            Canvas.self,
+            CanvasElement.self
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 

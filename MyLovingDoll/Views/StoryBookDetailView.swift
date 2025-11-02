@@ -19,7 +19,6 @@ struct StoryBookDetailView: View {
     @State private var selectedEntity: Entity?
     @State private var selectedSubjectId: UUID? // 选中的具体图片
     @State private var showingEntityPicker = false
-    @State private var showingSubjectPicker = false
     @State private var showingSuccessAlert = false
     
     var body: some View {
@@ -52,22 +51,13 @@ struct StoryBookDetailView: View {
                 bottomActionBar
             }
             .sheet(isPresented: $showingEntityPicker) {
-                EntityPickerSheet(selectedEntity: $selectedEntity) {
-                    // 选择对象后，默认使用封面图片
-                    if let entity = selectedEntity {
-                        selectedSubjectId = entity.coverSubjectId ?? entity.subjects?.first?.id
+                EntityPickerSheet(
+                    selectedEntity: $selectedEntity,
+                    selectedSubjectId: $selectedSubjectId,
+                    onConfirm: {
+                        // 选择完成后的回调
                     }
-                }
-            }
-            .sheet(isPresented: $showingSubjectPicker) {
-                if let entity = selectedEntity {
-                    SubjectGridView(
-                        entity: entity,
-                        mode: .select,
-                        selectedIndex: .constant(0),
-                        selectedSubjectId: $selectedSubjectId
-                    )
-                }
+                )
             }
             .alert("创建成功", isPresented: $showingSuccessAlert) {
                 Button("查看我的故事", role: .none) {
@@ -205,20 +195,8 @@ struct StoryBookDetailView: View {
                                 .font(.subheadline)
                                 .fontWeight(.medium)
                             
-                            let subjectCount = selectedEntity.subjects?.count ?? 0
-                            if subjectCount > 1 {
-                                Button {
-                                    showingSubjectPicker = true
-                                } label: {
-                                    HStack(spacing: 4) {
-                                        Image(systemName: "photo.on.rectangle.angled")
-                                        Text("共 \(subjectCount) 张，点击选择")
-                                    }
-                                    .font(.caption)
-                                    .foregroundColor(.blue)
-                                }
-                            } else {
-                                Text("1 张图片")
+                            if let subjectCount = selectedEntity.subjects?.count {
+                                Text("共 \(subjectCount) 张照片")
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                             }
@@ -412,6 +390,7 @@ struct EntityPickerSheet: View {
     @Query private var entities: [Entity]
     
     @Binding var selectedEntity: Entity?
+    @Binding var selectedSubjectId: UUID?
     let onConfirm: () -> Void
     
     var body: some View {
@@ -421,13 +400,27 @@ struct EntityPickerSheet: View {
                     GridItem(.adaptive(minimum: 100), spacing: 16)
                 ], spacing: 16) {
                     ForEach(entities.filter { ($0.subjects?.count ?? 0) > 0 }) { entity in
-                        EntityGridItem(
-                            entity: entity,
-                            isSelected: selectedEntity?.id == entity.id
-                        )
-                        .onTapGesture {
-                            selectedEntity = entity
+                        NavigationLink {
+                            SubjectGridView(
+                                entity: entity,
+                                mode: .select,
+                                selectedIndex: .constant(0),
+                                selectedSubjectId: $selectedSubjectId
+                            )
+                            .onDisappear {
+                                if selectedSubjectId != nil {
+                                    selectedEntity = entity
+                                    dismiss()
+                                    onConfirm()
+                                }
+                            }
+                        } label: {
+                            EntityGridItem(
+                                entity: entity,
+                                isSelected: selectedEntity?.id == entity.id
+                            )
                         }
+                        .buttonStyle(.plain)
                     }
                 }
                 .padding()
@@ -439,14 +432,6 @@ struct EntityPickerSheet: View {
                     Button("取消") {
                         dismiss()
                     }
-                }
-                
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("确定") {
-                        dismiss()
-                        onConfirm()
-                    }
-                    .disabled(selectedEntity == nil)
                 }
             }
         }
