@@ -71,6 +71,33 @@ struct CanvasEditorView: View {
                     
                     Spacer()
                     
+                    // 旋转 Slider (0-180°)
+                    HStack(spacing: 8) {
+                        Image(systemName: "arrow.counterclockwise")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        
+                        Slider(
+                            value: Binding(
+                                get: { selected.rotation },
+                                set: { newValue in
+                                    selected.rotation = newValue
+                                    try? modelContext.save()
+                                }
+                            ),
+                            in: 0...180,
+                            step: 1
+                        )
+                        .frame(width: 150)
+                        
+                        Text("\(Int(selected.rotation))°")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .frame(width: 35)
+                    }
+                    
+                    Spacer()
+                    
                     // 删除
                     Button(role: .destructive) {
                         canvas.removeElement(selected)
@@ -300,23 +327,6 @@ struct CanvasElementView: View {
                         .stroke(Color.blue, lineWidth: 2)
                 }
             }
-            
-            // 旋转把手
-            if isSelected && !isLayerAdjustmentMode {
-                GeometryReader { geometry in
-                    RotationHandle(
-                        elementSize: 100 * element.scale * currentScale,
-                        currentRotation: element.rotation,
-                        onRotate: { newRotation in
-                            element.rotation = newRotation
-                        },
-                        onRotateEnd: {
-                            saveCanvasChanges()
-                        }
-                    )
-                    .frame(width: geometry.size.width, height: geometry.size.height)
-                }
-            }
         }
         .frame(width: 100 * element.scale * currentScale)
         .rotationEffect(Angle(degrees: element.rotation) + currentRotation)
@@ -487,54 +497,6 @@ struct ShareSheet: UIViewControllerRepresentable {
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
-// MARK: - 旋转把手
-struct RotationHandle: View {
-    let elementSize: CGFloat
-    let currentRotation: Double
-    let onRotate: (Double) -> Void
-    let onRotateEnd: () -> Void
-    
-    @State private var startAngle: Double = 0
-    @State private var isDragging = false
-    
-    private let handleOffset: CGFloat = 20
-    
-    var body: some View {
-        Circle()
-            .fill(Color.blue)
-            .frame(width: 30, height: 30)
-            .overlay {
-                Image(systemName: "arrow.clockwise")
-                    .foregroundColor(.white)
-                    .font(.system(size: 14))
-            }
-            .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
-            .offset(x: elementSize / 2 + handleOffset, y: -elementSize / 2 - handleOffset)
-            .gesture(
-                DragGesture()
-                    .onChanged { value in
-                        if !isDragging {
-                            isDragging = true
-                            startAngle = currentRotation
-                        }
-                        
-                        // 计算角度
-                        let vector = CGPoint(
-                            x: value.location.x,
-                            y: value.location.y
-                        )
-                        let angle = atan2(vector.y, vector.x) * 180 / .pi
-                        let adjustedAngle = angle - 45 // 调整因为把手在右上角
-                        
-                        onRotate(adjustedAngle)
-                    }
-                    .onEnded { _ in
-                        isDragging = false
-                        onRotateEnd()
-                    }
-            )
-    }
-}
 
 // MARK: - 浮动层级指示器
 struct FloatingLayerIndicator: View {
