@@ -38,7 +38,11 @@ struct EntityDetailView: View {
     
     // 该对象参与的故事
     var entityStories: [StoryInstance] {
-        allStories.filter { $0.entity?.id == entity.id }
+        allStories.filter { story in
+            // 安全检查，过滤掉entity已被删除的story
+            guard let storyEntity = story.entity else { return false }
+            return storyEntity.id == entity.id
+        }
     }
     
     var body: some View {
@@ -332,6 +336,15 @@ struct EntityDetailView: View {
         
         // 如果删除后实体为空,删除实体并返回
         if entity.subjects?.isEmpty ?? true {
+            // 删除相关的故事实例
+            let storyDescriptor = FetchDescriptor<StoryInstance>()
+            if let allStories = try? modelContext.fetch(storyDescriptor) {
+                let relatedStories = allStories.filter { $0.entity?.id == entity.id }
+                for story in relatedStories {
+                    modelContext.delete(story)
+                }
+            }
+            
             modelContext.delete(entity)
             try? modelContext.save()
             dismiss()

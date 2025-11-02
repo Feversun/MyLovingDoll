@@ -146,7 +146,7 @@ struct ObjectCampHomeView: View {
                     NavigationLink {
                         SettingsView()
                     } label: {
-                        Image(systemName: "gear")
+                        Image("TabIcon_Setting")
                     }
                 }
             }

@@ -98,9 +98,14 @@ struct CanvasEditorView: View {
                 }
             )
         }
-        .sheet(isPresented: $showingShareSheet) {
+        .sheet(isPresented: Binding(
+            get: { showingShareSheet && renderedImage != nil },
+            set: { showingShareSheet = $0 }
+        )) {
             if let image = renderedImage {
                 ShareSheet(items: [image])
+            } else {
+                EmptyView()
             }
         }
         .sheet(isPresented: $showingLayerManager) {
@@ -229,41 +234,97 @@ struct CanvasElementView: View {
     @State private var lastTargetIndex: Int = 0 // 记录上一次的目标索引
     
     var body: some View {
-        Group {
-            if element.elementType == .doll, 
-               let stickerPath = element.dollStickerPath,
-               let specId = element.dollSpecId,
-               let uiImage = FileManager.loadImage(relativePath: stickerPath, specId: specId) {
-                // 娃娃：从对象库加载
-                Image(uiImage: uiImage)
-                    .resizable()
-                    .scaledToFit()
-            } else if let asset = findAsset() {
-                // PDF 素材
-                assetLibrary.getAssetImage(for: asset)
-                    .resizable()
-                    .scaledToFit()
-            } else {
-                // Fallback
-                Image(systemName: element.elementType.icon)
-                    .resizable()
-                    .scaledToFit()
+        ZStack {
+            // 主图像
+            Group {
+                if element.elementType == .doll, 
+                   let stickerPath = element.dollStickerPath,
+                   let specId = element.dollSpecId,
+                   let uiImage = FileManager.loadImage(relativePath: stickerPath, specId: specId) {
+                    // 娃娃：从对象库加载
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .scaledToFit()
+                } else if let asset = findAsset() {
+                    // PDF 素材
+                    assetLibrary.getAssetImage(for: asset)
+                        .resizable()
+                        .scaledToFit()
+                } else {
+                    // Fallback
+                    Image(systemName: element.elementType.icon)
+                        .resizable()
+                        .scaledToFit()
+                }
+            }
+            
+            // 选中时的轮廓高亮
+            if isSelected && !isLayerAdjustmentMode {
+                if element.elementType == .doll,
+                   let stickerPath = element.dollStickerPath,
+                   let specId = element.dollSpecId,
+                   let uiImage = FileManager.loadImage(relativePath: stickerPath, specId: specId) {
+                    // 使用原图像的轮廓作为高亮
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .scaledToFit()
+                        .colorMultiply(.blue)
+                        .opacity(0.3)
+                        .blendMode(.screen)
+                        .overlay {
+                            // 轮廓描边
+                            Image(uiImage: uiImage)
+                                .resizable()
+                                .scaledToFit()
+                                .overlay {
+                                    Color.clear
+                                        .background(
+                                            LinearGradient(
+                                                colors: [.blue, .cyan],
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            )
+                                        )
+                                        .mask(
+                                            Image(uiImage: uiImage)
+                                                .resizable()
+                                                .scaledToFit()
+                                        )
+                                        .blur(radius: 3)
+                                        .opacity(0.8)
+                                }
+                        }
+                } else {
+                    // 非Doll类型使用方框
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color.blue, lineWidth: 2)
+                }
+            }
+            
+            // 旋转把手
+            if isSelected && !isLayerAdjustmentMode {
+                GeometryReader { geometry in
+                    RotationHandle(
+                        elementSize: 100 * element.scale * currentScale,
+                        currentRotation: element.rotation,
+                        onRotate: { newRotation in
+                            element.rotation = newRotation
+                        },
+                        onRotateEnd: {
+                            saveCanvasChanges()
+                        }
+                    )
+                    .frame(width: geometry.size.width, height: geometry.size.height)
+                }
             }
         }
         .frame(width: 100 * element.scale * currentScale)
         .rotationEffect(Angle(degrees: element.rotation) + currentRotation)
-        .overlay {
-            if isSelected && !isLayerAdjustmentMode {
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(Color.blue, lineWidth: 2)
-            }
-        }
         .position(element.position)
         .offset(currentPosition)
-        .highPriorityGesture(longPressGesture) // 长按手势优先级最高
-        .simultaneousGesture(isLayerAdjustmentMode ? nil : dragGesture)
-        .simultaneousGesture(isLayerAdjustmentMode ? nil : magnificationGesture)
-        .simultaneousGesture(isLayerAdjustmentMode ? nil : rotationGesture)
+        .gesture(isLayerAdjustmentMode ? nil : dragGesture)
+        .gesture(isLayerAdjustmentMode ? nil : magnificationGesture)
+        .gesture(longPressGesture) // 长按手势最后添加，避免与其他手势冲突
     }
     
     private func findAsset() -> Asset? {
@@ -285,6 +346,7 @@ struct CanvasElementView: View {
                 element.positionX += Double(value.translation.width)
                 element.positionY += Double(value.translation.height)
                 currentPosition = .zero
+                saveCanvasChanges()
             }
     }
     
@@ -297,25 +359,19 @@ struct CanvasElementView: View {
             .onEnded { value in
                 element.scale *= Double(value)
                 currentScale = 1.0
+                saveCanvasChanges()
             }
     }
     
-    // MARK: - 旋转手势
-    var rotationGesture: some Gesture {
-        RotationGesture()
-            .onChanged { value in
-                currentRotation = value
-            }
-            .onEnded { value in
-                element.rotation += value.degrees
-                currentRotation = .zero
-            }
-    }
     
     // MARK: - 长按手势（1秒）+ 上下滑动调整层级
     var longPressGesture: some Gesture {
         LongPressGesture(minimumDuration: 1.0)
             .onEnded { _ in
+                // 防止在缩放/旋转时误触发
+                guard currentScale == 1.0 && currentRotation == .zero && currentPosition == .zero else {
+                    return
+                }
                 // 长按1秒激活 - 提供haptic反馈
                 longPressActivated = true
                 initialZIndex = element.zIndex // 记录初始层级
@@ -357,6 +413,9 @@ struct CanvasElementView: View {
                     isLayerAdjustmentMode = false
                     layerAdjustingElement = nil
                     dragOffsetY = 0
+                    
+                    // 保存层级调整
+                    saveCanvasChanges()
                 }
             }
     }
@@ -409,6 +468,12 @@ struct CanvasElementView: View {
             }
         }
     }
+    
+    private func saveCanvasChanges() {
+        if let modelContext = canvas.modelContext {
+            try? modelContext.save()
+        }
+    }
 }
 
 // MARK: - 分享 Sheet
@@ -420,6 +485,55 @@ struct ShareSheet: UIViewControllerRepresentable {
     }
     
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+}
+
+// MARK: - 旋转把手
+struct RotationHandle: View {
+    let elementSize: CGFloat
+    let currentRotation: Double
+    let onRotate: (Double) -> Void
+    let onRotateEnd: () -> Void
+    
+    @State private var startAngle: Double = 0
+    @State private var isDragging = false
+    
+    private let handleOffset: CGFloat = 20
+    
+    var body: some View {
+        Circle()
+            .fill(Color.blue)
+            .frame(width: 30, height: 30)
+            .overlay {
+                Image(systemName: "arrow.clockwise")
+                    .foregroundColor(.white)
+                    .font(.system(size: 14))
+            }
+            .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
+            .offset(x: elementSize / 2 + handleOffset, y: -elementSize / 2 - handleOffset)
+            .gesture(
+                DragGesture()
+                    .onChanged { value in
+                        if !isDragging {
+                            isDragging = true
+                            startAngle = currentRotation
+                        }
+                        
+                        // 计算角度
+                        let vector = CGPoint(
+                            x: value.location.x,
+                            y: value.location.y
+                        )
+                        let angle = atan2(vector.y, vector.x) * 180 / .pi
+                        let adjustedAngle = angle - 45 // 调整因为把手在右上角
+                        
+                        onRotate(adjustedAngle)
+                    }
+                    .onEnded { _ in
+                        isDragging = false
+                        onRotateEnd()
+                    }
+            )
+    }
 }
 
 // MARK: - 浮动层级指示器

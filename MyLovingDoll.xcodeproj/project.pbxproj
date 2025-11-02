@@ -421,6 +421,7 @@
 				DEVELOPMENT_TEAM = PW4V3SSQBJ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "需要使用相机拍摄对象进行识别";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "需要保存处理后的照片";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "需要访问相册以识别和整理您的娃娃照片";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -456,6 +457,7 @@
 				DEVELOPMENT_TEAM = PW4V3SSQBJ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "需要使用相机拍摄对象进行识别";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "需要保存处理后的照片";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "需要访问相册以识别和整理您的娃娃照片";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

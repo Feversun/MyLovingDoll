@@ -38,6 +38,7 @@ final class StoryInstance {
     var storyTitle: String
     
     /// 关联的对象
+    @Relationship(deleteRule: .nullify)
     var entity: Entity?
     
     /// 生成的故事页面（JSON存储）

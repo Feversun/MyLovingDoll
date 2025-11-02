@@ -108,7 +108,7 @@ struct MoveSubjectsView: View {
         
         // 如果当前实体已经没有主体，删除它
         if currentEntity.subjects?.isEmpty ?? true {
-            modelContext.delete(currentEntity)
+            deleteEntitySafely(currentEntity)
         }
         
         try? modelContext.save()
@@ -143,12 +143,25 @@ struct MoveSubjectsView: View {
         
         // 如果当前实体已经没有主体，删除它
         if currentEntity.subjects?.isEmpty ?? true {
-            modelContext.delete(currentEntity)
+            deleteEntitySafely(currentEntity)
         }
         
         try? modelContext.save()
         
         onComplete()
         dismiss()
+    }
+    
+    private func deleteEntitySafely(_ entity: Entity) {
+        // 删除相关的故事实例
+        let storyDescriptor = FetchDescriptor<StoryInstance>()
+        if let allStories = try? modelContext.fetch(storyDescriptor) {
+            let relatedStories = allStories.filter { $0.entity?.id == entity.id }
+            for story in relatedStories {
+                modelContext.delete(story)
+            }
+        }
+        
+        modelContext.delete(entity)
     }
 }

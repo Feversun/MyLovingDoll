@@ -171,12 +171,26 @@ struct EntityLibraryView: View {
                     subject.entity = nil
                 }
             }
+            
+            // 删除相关的故事实例
+            deleteRelatedStories(for: entity)
+            
             modelContext.delete(entity)
         }
         
         try? modelContext.save()
         selectedEntities.removeAll()
         isSelectionMode = false
+    }
+    
+    private func deleteRelatedStories(for entity: Entity) {
+        let storyDescriptor = FetchDescriptor<StoryInstance>()
+        if let allStories = try? modelContext.fetch(storyDescriptor) {
+            let relatedStories = allStories.filter { $0.entity?.id == entity.id }
+            for story in relatedStories {
+                modelContext.delete(story)
+            }
+        }
     }
 }
 

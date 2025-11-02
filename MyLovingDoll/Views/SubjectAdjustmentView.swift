@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 import VisionKit
 import Photos
 import Vision
@@ -18,6 +19,7 @@ struct SubjectAdjustmentView: View {
     
     let subject: Subject
     let specId: String
+    
     @State private var sourceImage: UIImage?
     @State private var editedImage: UIImage? // 编辑后的图片
     @State private var croppedImage: UIImage? // 裁剪后的图片
@@ -34,14 +36,15 @@ struct SubjectAdjustmentView: View {
     @State private var cropRect: CGRect = CGRect(x: 50, y: 100, width: 300, height: 300) // 裁剪框
     @State private var containerSize: CGSize = .zero // 容器尺寸
     
+    
     var currentDisplayImage: UIImage? {
         editedImage ?? sourceImage
     }
     
     var body: some View {
         NavigationStack {
-            ZStack {
-                if extractedSubject == nil {
+                ZStack {
+                    if extractedSubject == nil {
                     // 步骤 1: 显示图片 + 裁剪框 + 工具栏 + 识别按钮
                     VStack(spacing: 0) {
                         // 图片显示区域 + 可拖拽裁剪框
@@ -214,7 +217,6 @@ struct SubjectAdjustmentView: View {
                         .background(.ultraThinMaterial)
                         .cornerRadius(16)
                     }
-                }
             }
             .navigationTitle("调整主体")
             .navigationBarTitleDisplayMode(.inline)
@@ -237,10 +239,12 @@ struct SubjectAdjustmentView: View {
             .task {
                 await loadSourceImage()
             }
+            }
         }
     }
     
     private func loadSourceImage() async {
+        
         // 从 PHAsset 加载原始照片
         let asset = PHAsset.fetchAssets(withLocalIdentifiers: [subject.sourceAssetId], options: nil).firstObject
         
@@ -480,479 +484,6 @@ struct SubjectAdjustmentView: View {
             }
         } catch {
             errorMessage = "保存失败: \(error.localizedDescription)"
-        }
-    }
-}
-
-// MARK: - Image Edit Toolbar
-@available(iOS 17.0, *)
-struct ImageEditToolbar: View {
-    @Binding var rotationAngle: Double
-    let onRotate: (Double) -> Void
-    let onReset: () -> Void
-    
-    var body: some View {
-        HStack(spacing: 20) {
-            // 旋转
-            Button {
-                onRotate(.pi / 2) // 90度
-            } label: {
-                VStack(spacing: 4) {
-                    Image(systemName: "rotate.right")
-                        .font(.title3)
-                    Text("旋转")
-                        .font(.caption2)
-                }
-            }
-            
-            Spacer()
-            
-            Text("拖拽裁剪框调整范围")
-                .font(.caption)
-                .foregroundColor(.secondary)
-            
-            Spacer()
-            
-            // 重置
-            Button {
-                onReset()
-            } label: {
-                VStack(spacing: 4) {
-                    Image(systemName: "arrow.counterclockwise")
-                        .font(.title3)
-                    Text("重置")
-                        .font(.caption2)
-                }
-            }
-            .foregroundColor(.orange)
-        }
-        .buttonStyle(.plain)
-    }
-}
-
-// MARK: - Crop Overlay
-struct CropOverlay: View {
-    @Binding var cropRect: CGRect
-    let containerSize: CGSize
-    let imageSize: CGSize
-    
-    @GestureState private var dragOffset: CGSize = .zero
-    @State private var baseRect: CGRect = .zero
-    
-    enum HandlePosition {
-        case topLeft, topRight, bottomLeft, bottomRight
-        case top, bottom, left, right
-        case center
-    }
-    
-    private let handleSize: CGFloat = 44
-    private let minSize: CGFloat = 80
-    
-    var body: some View {
-        ZStack {
-            // 蒙版背景 (阴影区域)
-            Color.black.opacity(0.5)
-                .mask {
-                    Rectangle()
-                        .overlay {
-                            Rectangle()
-                                .frame(width: cropRect.width, height: cropRect.height)
-                                .position(x: cropRect.midX, y: cropRect.midY)
-                                .blendMode(.destinationOut)
-                        }
-                }
-                .allowsHitTesting(false)
-            
-            // 裁剪框
-            Rectangle()
-                .stroke(Color.white, lineWidth: 2)
-                .frame(width: cropRect.width, height: cropRect.height)
-                .position(x: cropRect.midX, y: cropRect.midY)
-            
-            // 网格线
-            Path { path in
-                // 水平线
-                let y1 = cropRect.minY + cropRect.height / 3
-                let y2 = cropRect.minY + cropRect.height * 2 / 3
-                path.move(to: CGPoint(x: cropRect.minX, y: y1))
-                path.addLine(to: CGPoint(x: cropRect.maxX, y: y1))
-                path.move(to: CGPoint(x: cropRect.minX, y: y2))
-                path.addLine(to: CGPoint(x: cropRect.maxX, y: y2))
-                
-                // 垂直线
-                let x1 = cropRect.minX + cropRect.width / 3
-                let x2 = cropRect.minX + cropRect.width * 2 / 3
-                path.move(to: CGPoint(x: x1, y: cropRect.minY))
-                path.addLine(to: CGPoint(x: x1, y: cropRect.maxY))
-                path.move(to: CGPoint(x: x2, y: cropRect.minY))
-                path.addLine(to: CGPoint(x: x2, y: cropRect.maxY))
-            }
-            .stroke(Color.white.opacity(0.5), lineWidth: 1)
-            
-            // 拖拽把手
-            handleView(at: .topLeft)
-            handleView(at: .topRight)
-            handleView(at: .bottomLeft)
-            handleView(at: .bottomRight)
-            handleView(at: .top)
-            handleView(at: .bottom)
-            handleView(at: .left)
-            handleView(at: .right)
-            
-            // 中心移动区域
-            Rectangle()
-                .fill(Color.clear)
-                .frame(width: max(cropRect.width - 80, 50), height: max(cropRect.height - 80, 50))
-                .position(x: cropRect.midX, y: cropRect.midY)
-                .gesture(
-                    DragGesture(minimumDistance: 0)
-                        .onChanged { value in
-                            let newX = baseRect.origin.x + value.translation.width
-                            let newY = baseRect.origin.y + value.translation.height
-                            
-                            var newRect = cropRect
-                            newRect.origin.x = max(0, min(newX, containerSize.width - cropRect.width))
-                            newRect.origin.y = max(0, min(newY, containerSize.height - cropRect.height))
-                            cropRect = newRect
-                        }
-                        .onEnded { _ in
-                            baseRect = cropRect
-                        }
-                )
-                .onAppear {
-                    baseRect = cropRect
-                }
-        }
-    }
-    
-    @ViewBuilder
-    private func handleView(at position: HandlePosition) -> some View {
-        let point = handlePoint(for: position)
-        let isCorner = [.topLeft, .topRight, .bottomLeft, .bottomRight].contains(position)
-        
-        Circle()
-            .fill(Color.white)
-            .shadow(color: .black.opacity(0.3), radius: 2)
-            .frame(width: isCorner ? 24 : 16, height: isCorner ? 24 : 16)
-            .position(point)
-            .gesture(
-                DragGesture(minimumDistance: 0)
-                    .onChanged { value in
-                        resizeCropRect(from: position, translation: value.translation)
-                    }
-                    .onEnded { _ in
-                        baseRect = cropRect
-                    }
-            )
-    }
-    
-    private func handlePoint(for position: HandlePosition) -> CGPoint {
-        switch position {
-        case .topLeft:
-            return CGPoint(x: cropRect.minX, y: cropRect.minY)
-        case .topRight:
-            return CGPoint(x: cropRect.maxX, y: cropRect.minY)
-        case .bottomLeft:
-            return CGPoint(x: cropRect.minX, y: cropRect.maxY)
-        case .bottomRight:
-            return CGPoint(x: cropRect.maxX, y: cropRect.maxY)
-        case .top:
-            return CGPoint(x: cropRect.midX, y: cropRect.minY)
-        case .bottom:
-            return CGPoint(x: cropRect.midX, y: cropRect.maxY)
-        case .left:
-            return CGPoint(x: cropRect.minX, y: cropRect.midY)
-        case .right:
-            return CGPoint(x: cropRect.maxX, y: cropRect.midY)
-        case .center:
-            return CGPoint(x: cropRect.midX, y: cropRect.midY)
-        }
-    }
-    
-    private func resizeCropRect(from position: HandlePosition, translation: CGSize) {
-        var newRect = baseRect
-        
-        switch position {
-        case .topLeft:
-            newRect.origin.x = baseRect.origin.x + translation.width
-            newRect.origin.y = baseRect.origin.y + translation.height
-            newRect.size.width = baseRect.width - translation.width
-            newRect.size.height = baseRect.height - translation.height
-        case .topRight:
-            newRect.origin.y = baseRect.origin.y + translation.height
-            newRect.size.width = baseRect.width + translation.width
-            newRect.size.height = baseRect.height - translation.height
-        case .bottomLeft:
-            newRect.origin.x = baseRect.origin.x + translation.width
-            newRect.size.width = baseRect.width - translation.width
-            newRect.size.height = baseRect.height + translation.height
-        case .bottomRight:
-            newRect.size.width = baseRect.width + translation.width
-            newRect.size.height = baseRect.height + translation.height
-        case .top:
-            newRect.origin.y = baseRect.origin.y + translation.height
-            newRect.size.height = baseRect.height - translation.height
-        case .bottom:
-            newRect.size.height = baseRect.height + translation.height
-        case .left:
-            newRect.origin.x = baseRect.origin.x + translation.width
-            newRect.size.width = baseRect.width - translation.width
-        case .right:
-            newRect.size.width = baseRect.width + translation.width
-        case .center:
-            break
-        }
-        
-        // 限制最小尺寸
-        if newRect.width >= minSize && newRect.height >= minSize {
-            // 限制在容器内
-            newRect.origin.x = max(0, min(newRect.origin.x, containerSize.width - newRect.width))
-            newRect.origin.y = max(0, min(newRect.origin.y, containerSize.height - newRect.height))
-            newRect.size.width = min(newRect.width, containerSize.width - newRect.origin.x)
-            newRect.size.height = min(newRect.height, containerSize.height - newRect.origin.y)
-            cropRect = newRect
-        }
-    }
-    
-    private func moveCropRect(by translation: CGSize) {
-        var newRect = cropRect
-        newRect.origin.x += translation.width
-        newRect.origin.y += translation.height
-        
-        // 限制在容器内
-        newRect.origin.x = max(0, min(newRect.origin.x, containerSize.width - newRect.width))
-        newRect.origin.y = max(0, min(newRect.origin.y, containerSize.height - newRect.height))
-        
-        cropRect = newRect
-    }
-}
-
-// MARK: - Simple Crop View
-struct SimpleCropView: View {
-    @Environment(\.dismiss) var dismiss
-    let image: UIImage
-    let onCrop: (UIImage) -> Void
-    
-    @State private var scale: CGFloat = 1.0
-    @State private var lastScale: CGFloat = 1.0
-    @State private var offset: CGSize = .zero
-    @State private var lastOffset: CGSize = .zero
-    
-    var body: some View {
-        NavigationStack {
-            ZStack {
-                Color.black.ignoresSafeArea()
-                
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFit()
-                    .scaleEffect(scale)
-                    .offset(offset)
-                    .gesture(
-                        MagnificationGesture()
-                            .onChanged { value in
-                                scale = lastScale * value
-                            }
-                            .onEnded { _ in
-                                lastScale = scale
-                            }
-                    )
-                    .simultaneousGesture(
-                        DragGesture()
-                            .onChanged { value in
-                                offset = CGSize(
-                                    width: lastOffset.width + value.translation.width,
-                                    height: lastOffset.height + value.translation.height
-                                )
-                            }
-                            .onEnded { _ in
-                                lastOffset = offset
-                            }
-                    )
-                
-                // 裁剪框提示
-                Rectangle()
-                    .stroke(Color.white, lineWidth: 2)
-                    .frame(width: 300, height: 300)
-                    .allowsHitTesting(false)
-            }
-            .navigationTitle("裁剪图片")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("取消") {
-                        dismiss()
-                    }
-                }
-                
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("完成") {
-                        cropImage()
-                    }
-                }
-            }
-        }
-    }
-    
-    private func cropImage() {
-        // 简化版本: 直接返回缩放后的图片
-        // 实际裁剪需要计算可见区域并裁剪
-        if scale != 1.0, let scaledImage = image.scaled(by: scale) {
-            onCrop(scaledImage)
-        } else {
-            onCrop(image)
-        }
-    }
-}
-
-// MARK: - Subject Selection View
-@available(iOS 17.0, *)
-struct SubjectSelectionView: View {
-    let subjects: [(UIImage, Double)]
-    @Binding var selectedIndex: Int?
-    let onConfirm: () -> Void
-    let onCancel: () -> Void
-    
-    var body: some View {
-        VStack(spacing: 20) {
-            Text("选择一个主体")
-                .font(.headline)
-            
-            Text("识别到 \(subjects.count) 个主体")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-            
-            ScrollView {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 16)], spacing: 16) {
-                    ForEach(subjects.indices, id: \.self) { index in
-                        VStack(spacing: 8) {
-                            Image(uiImage: subjects[index].0)
-                                .resizable()
-                                .scaledToFit()
-                                .frame(height: 150)
-                                .background(Color.gray.opacity(0.1))
-                                .cornerRadius(12)
-                                .overlay {
-                                    if selectedIndex == index {
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .stroke(.blue, lineWidth: 3)
-                                    }
-                                }
-                                .onTapGesture {
-                                    selectedIndex = index
-                                }
-                            
-                            Text(String(format: "%.0f%%", subjects[index].1 * 100))
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                }
-                .padding()
-            }
-            
-            HStack(spacing: 16) {
-                Button("取消") {
-                    onCancel()
-                }
-                .font(.headline)
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(.gray.opacity(0.2))
-                .foregroundColor(.primary)
-                .cornerRadius(12)
-                
-                Button("确认") {
-                    onConfirm()
-                }
-                .font(.headline)
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(selectedIndex != nil ? Color.blue.gradient : Color.gray.gradient)
-                .foregroundColor(.white)
-                .cornerRadius(12)
-                .disabled(selectedIndex == nil)
-            }
-            .padding(.horizontal)
-        }
-    }
-}
-
-// MARK: - ImageAnalysisView (封装 ImageAnalysisInteraction)
-@available(iOS 17.0, *)
-struct ImageAnalysisView: UIViewRepresentable {
-    let image: UIImage
-    let onSubjectExtracted: (UIImage) -> Void
-    
-    func makeUIView(context: Context) -> ImageAnalysisContainerView {
-        let containerView = ImageAnalysisContainerView()
-        containerView.configure(with: image, onSubjectExtracted: onSubjectExtracted)
-        return containerView
-    }
-    
-    func updateUIView(_ uiView: ImageAnalysisContainerView, context: Context) {}
-}
-
-// MARK: - ImageAnalysisContainerView
-@available(iOS 17.0, *)
-class ImageAnalysisContainerView: UIView {
-    private var imageView: UIImageView!
-    private var interaction: ImageAnalysisInteraction!
-    private var analyzer = ImageAnalyzer()
-    private var onSubjectExtracted: ((UIImage) -> Void)?
-    
-    override init(frame: CGRect) {
-        super.init(frame: frame)
-        setupViews()
-    }
-    
-    required init?(coder: NSCoder) {
-        super.init(coder: coder)
-        setupViews()
-    }
-    
-    private func setupViews() {
-        // 创建 ImageView
-        imageView = UIImageView()
-        imageView.contentMode = .scaleAspectFit
-        imageView.isUserInteractionEnabled = true
-        imageView.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(imageView)
-        
-        NSLayoutConstraint.activate([
-            imageView.topAnchor.constraint(equalTo: topAnchor),
-            imageView.bottomAnchor.constraint(equalTo: bottomAnchor),
-            imageView.leadingAnchor.constraint(equalTo: leadingAnchor),
-            imageView.trailingAnchor.constraint(equalTo: trailingAnchor)
-        ])
-        
-        // 创建 ImageAnalysisInteraction
-        interaction = ImageAnalysisInteraction()
-        interaction.preferredInteractionTypes = [.imageSubject]
-        imageView.addInteraction(interaction)
-    }
-    
-    func configure(with image: UIImage, onSubjectExtracted: @escaping (UIImage) -> Void) {
-        self.imageView.image = image
-        self.onSubjectExtracted = onSubjectExtracted
-        
-        Task {
-            await analyzeImage(image)
-        }
-    }
-    
-    private func analyzeImage(_ image: UIImage) async {
-        do {
-            let configuration = ImageAnalyzer.Configuration([.visualLookUp])
-            let analysis = try await analyzer.analyze(image, configuration: configuration)
-            
-            await MainActor.run {
-                interaction.analysis = analysis
-                interaction.preferredInteractionTypes = [.imageSubject]
-            }
-            
-        } catch {
-            print("Image analysis failed: \(error)")
         }
     }
 }

@@ -16,19 +16,25 @@ struct MainTabView: View {
             // Tab 1: 对象库
             ObjectCampHomeView(modelContext: modelContext)
                 .tabItem {
-                    Label("对象库", systemImage: "photo.stack.fill")
+                    Image("TabIcon_Home")
+                        .renderingMode(.original)
+                    Text("对象库")
                 }
             
             // Tab 2: 故事书
             StoryBooksView()
                 .tabItem {
-                    Label("故事书", systemImage: "book.fill")
+                    Image("TabIcon_Book")
+                        .renderingMode(.original)
+                    Text("故事书")
                 }
             
             // Tab 3: 我的故事
             MyStoriesView()
                 .tabItem {
-                    Label("我的故事", systemImage: "book.pages.fill")
+                    Image("TabIcon_MyStory")
+                        .renderingMode(.original)
+                    Text("我的故事")
                 }
             
             // Tab 4: 画布
