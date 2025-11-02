@@ -143,11 +143,17 @@ struct CanvasEditorView: View {
     private func addElement(_ asset: Asset) {
         let screenCenter = CGPoint(x: UIScreen.main.bounds.width / 2,
                                   y: UIScreen.main.bounds.height / 2)
+        
+        // 计算最高层级
+        let maxZIndex = (canvas.elements?.map { $0.zIndex }.max() ?? -1) + 1
+        
         let element = CanvasElement(
             type: asset.category,
             assetName: asset.name,
             position: screenCenter
         )
+        element.zIndex = maxZIndex // 默认在最顶层
+        
         canvas.addElement(element)
         try? modelContext.save()
     }
@@ -155,10 +161,16 @@ struct CanvasEditorView: View {
     private func addDollElement(_ dollAsset: DollAsset) {
         let screenCenter = CGPoint(x: UIScreen.main.bounds.width / 2,
                                   y: UIScreen.main.bounds.height / 2)
+        
+        // 计算最高层级
+        let maxZIndex = (canvas.elements?.map { $0.zIndex }.max() ?? -1) + 1
+        
         let element = CanvasElement(
             dollAsset: dollAsset,
             position: screenCenter
         )
+        element.zIndex = maxZIndex // 默认在最顶层
+        
         canvas.addElement(element)
         try? modelContext.save()
     }
@@ -205,6 +217,16 @@ struct CanvasContent: View {
     var body: some View {
         GeometryReader { geometry in
             ZStack {
+                // 画布背景（点击取消选中）
+                Color.clear
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        // 点击空白处取消选中
+                        if !isLayerAdjustmentMode {
+                            selectedElement = nil
+                        }
+                    }
+                
                 // 所有元素
                 ForEach(canvas.elements ?? []) { element in
                     CanvasElementView(
