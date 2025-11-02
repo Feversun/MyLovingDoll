@@ -14,7 +14,7 @@ struct MainTabView: View {
     var body: some View {
         TabView {
             // Tab 1: 对象库
-            ObjectCampHomeView(modelContext: modelContext)
+            EntityLibraryView()
                 .tabItem {
                     Image("TabIcon_Home")
                         .renderingMode(.original)

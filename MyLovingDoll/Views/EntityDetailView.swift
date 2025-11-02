@@ -29,7 +29,18 @@ struct EntityDetailView: View {
     @State private var showingStoryBookPicker = false
     
     var subjects: [Subject] {
-        entity.subjects ?? []
+        guard let allSubjects = entity.subjects, !allSubjects.isEmpty else { return [] }
+        
+        // 如果设置了封面图，将其放在第一位
+        if let coverSubjectId = entity.coverSubjectId,
+           let coverIndex = allSubjects.firstIndex(where: { $0.id == coverSubjectId }) {
+            var sortedSubjects = allSubjects
+            let coverSubject = sortedSubjects.remove(at: coverIndex)
+            sortedSubjects.insert(coverSubject, at: 0)
+            return sortedSubjects
+        }
+        
+        return allSubjects
     }
     
     var currentSubject: Subject? {
@@ -46,37 +57,74 @@ struct EntityDetailView: View {
     }
     
     var body: some View {
-        ZStack(alignment: .bottom) {
-            // 整体滚动区域
-            ScrollView {
-                VStack(spacing: 0) {
-                    // 大图显示
-                    if !subjects.isEmpty {
-                        TabView(selection: $currentIndex) {
-                            ForEach(subjects.indices, id: \.self) { index in
-                                if let specId = entity.targetSpec?.specId {
-                                    SubjectLargeImageView(
-                                        subject: subjects[index],
-                                        specId: specId
-                                    )
-                                    .tag(index)
+        GeometryReader { geometry in
+            ZStack(alignment: .bottom) {
+                // 整体滚动区域
+                ScrollView {
+                    VStack(spacing: 0) {
+                        // 大图显示
+                        if !subjects.isEmpty {
+                            ZStack(alignment: .bottom) {
+                                TabView(selection: $currentIndex) {
+                                    ForEach(subjects.indices, id: \.self) { index in
+                                        if let specId = entity.targetSpec?.specId {
+                                            SubjectLargeImageView(
+                                                subject: subjects[index],
+                                                specId: specId
+                                            )
+                                            .tag(index)
+                                        }
+                                    }
                                 }
+                                .tabViewStyle(.page(indexDisplayMode: .always))
+                                .indexViewStyle(.page(backgroundDisplayMode: .always))
+                                .frame(height: geometry.size.height * 0.4)
+                                
+                                // 图片预览区域按钮
+                                HStack(spacing: 16) {
+                                    Button {
+                                        showingAdjustmentView = true
+                                    } label: {
+                                        Label("调整", systemImage: "crop.rotate")
+                                            .font(.subheadline)
+                                            .foregroundColor(.primary)
+                                            .padding(.horizontal, 16)
+                                            .padding(.vertical, 10)
+                                            .background(.regularMaterial)
+                                            .cornerRadius(20)
+                                    }
+                                    
+                                    Button {
+                                        showingAllPhotosSheet = true
+                                    } label: {
+                                        Label("所有", systemImage: "square.grid.2x2")
+                                            .font(.subheadline)
+                                            .foregroundColor(.primary)
+                                            .padding(.horizontal, 16)
+                                            .padding(.vertical, 10)
+                                            .background(.regularMaterial)
+                                            .cornerRadius(20)
+                                    }
+                                }
+                                .padding(.bottom, 60)
                             }
+                            
+                            // 对象属性卡片
+                            EntityProfileCard(entity: entity) {
+                                showingProfileEdit = true
+                            }
+                            .padding()
+                        } else {
+                            VStack(spacing: 20) {
+                                Image(systemName: "photo.on.rectangle.angled")
+                                    .font(.system(size: 60))
+                                    .foregroundColor(.secondary)
+                                Text("暂无照片")
+                                    .font(.title3)
+                                    .foregroundColor(.secondary)
+                            }
+                            .frame(height: geometry.size.height * 0.4)
                         }
-                        .tabViewStyle(.page(indexDisplayMode: .always))
-                        .indexViewStyle(.page(backgroundDisplayMode: .always))
-                        .frame(height: 500)
-                    } else {
-                        VStack(spacing: 20) {
-                            Image(systemName: "photo.on.rectangle.angled")
-                                .font(.system(size: 60))
-                                .foregroundColor(.secondary)
-                            Text("暂无照片")
-                                .font(.title3)
-                                .foregroundColor(.secondary)
-                        }
-                        .frame(height: 500)
-                    }
                     
                     // 参与的故事区域
                     if !entityStories.isEmpty {
@@ -142,109 +190,64 @@ struct EntityDetailView: View {
                         .background(Color(.systemBackground))
                         .padding(.bottom, 80)
                     }
-                }
-            }
-            
-            // 底部工具栏
-            if !subjects.isEmpty {
-                VStack(spacing: 0) {
-                    Divider()
-                    
-                    HStack(spacing: 0) {
-                        // 调整主体
-                        ToolbarButton(
-                            icon: "crop.rotate",
-                            title: "调整"
-                        ) {
-                            showingAdjustmentView = true
-                        }
-                        
-                        Divider().frame(height: 40)
-                        
-                        // 查看所有
-                        ToolbarButton(
-                            icon: "square.grid.2x2",
-                            title: "所有"
-                        ) {
-                            showingAllPhotosSheet = true
-                        }
-                        
-                        Divider().frame(height: 40)
-                        
-                        // AI 图片
-                        ToolbarButton(
-                            icon: "sparkles",
-                            title: "AI图",
-                            color: .purple
-                        ) {
-                            showingAIGeneration = true
-                        }
-                        
-                        Divider().frame(height: 40)
-                        
-                        // AI 视频
-                        ToolbarButton(
-                            icon: "video.badge.waveform",
-                            title: "视频",
-                            color: .orange
-                        ) {
-                            showingVideoGeneration = true
-                        }
-                        
-                        Divider().frame(height: 40)
-                        
-                        // 移动
-                        ToolbarButton(
-                            icon: "arrow.right.circle",
-                            title: "移动"
-                        ) {
-                            showingMoveSheet = true
-                        }
-                        
-                        Divider().frame(height: 40)
-                        
-                        // 删除
-                        ToolbarButton(
-                            icon: "trash",
-                            title: "删除",
-                            color: .red
-                        ) {
-                            showingDeleteAlert = true
-                        }
                     }
-                    .padding(.vertical, 12)
-                    .background(.regularMaterial)
                 }
-            }
+                
+                // 底部工具栏 - AI 功能
+                if !subjects.isEmpty {
+                    VStack(spacing: 0) {
+                        Divider()
+                        
+                        HStack(spacing: 12) {
+                            Button {
+                                showingAIGeneration = true
+                            } label: {
+                                Label("AI图", systemImage: "sparkles")
+                                    .font(.subheadline)
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 12)
+                                    .background(Color.purple.gradient)
+                                    .cornerRadius(12)
+                            }
+                            
+                            Button {
+                                showingVideoGeneration = true
+                            } label: {
+                                Label("视频", systemImage: "video.badge.waveform")
+                                    .font(.subheadline)
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 12)
+                                    .background(Color.orange.gradient)
+                                    .cornerRadius(12)
+                            }
+                        }
+                        .padding()
+                        .background(.regularMaterial)
+                    }
+                }
+        }
         }
         .navigationTitle(entity.customName ?? "未命名对象")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
+            ToolbarItem(placement: .topBarTrailing) {
                 Menu {
                     Button {
-                        showingStoriesSheet = true
+                        showingMoveSheet = true
                     } label: {
-                        Label("查看参与的故事 (\(entityStories.count))", systemImage: "book.pages")
+                        Label("移动", systemImage: "arrow.right.circle")
                     }
                     
-                    Button {
-                        showingStoryBookPicker = true
+                    Button(role: .destructive) {
+                        showingDeleteAlert = true
                     } label: {
-                        Label("加入新故事", systemImage: "plus.circle")
+                        Label("删除", systemImage: "trash")
                     }
                 } label: {
-                    Image(systemName: "book.circle.fill")
-                        .foregroundStyle(.blue.gradient)
-                }
-            }
-            
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    showingProfileEdit = true
-                } label: {
-                    Image(systemName: "pencil.circle.fill")
-                        .foregroundStyle(.pink.gradient)
+                    Image(systemName: "ellipsis.circle")
+                        .foregroundStyle(.blue)
                 }
             }
         }
@@ -359,6 +362,121 @@ struct EntityDetailView: View {
     }
 }
 
+// MARK: - Entity Profile Card
+struct EntityProfileCard: View {
+    @Bindable var entity: Entity
+    let onEdit: () -> Void
+    
+    // 判断是否已经编辑过
+    var hasProfile: Bool {
+        entity.relationship != nil ||
+        entity.birthday != nil ||
+        entity.personality != nil ||
+        entity.hobbies != nil ||
+        entity.appearance != nil ||
+        entity.specialAbilities != nil ||
+        entity.backgroundStory != nil
+    }
+    
+    var body: some View {
+        Button(action: onEdit) {
+            if hasProfile {
+                // 已编辑状态 - 展示信息
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Label("对象资料", systemImage: "person.text.rectangle")
+                            .font(.headline)
+                            .foregroundColor(.primary)
+                        Spacer()
+                        Image(systemName: "pencil.circle.fill")
+                            .foregroundColor(.pink)
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 8) {
+                        if let relationship = entity.relationship, !relationship.isEmpty {
+                            InfoRow(icon: "heart.fill", label: "关系", value: relationship)
+                        }
+                        
+                        if let birthday = entity.birthday {
+                            InfoRow(icon: "gift.fill", label: "生日", value: birthday.formatted(date: .abbreviated, time: .omitted))
+                        }
+                        
+                        if let personality = entity.personality, !personality.isEmpty {
+                            InfoRow(icon: "sparkles", label: "性格", value: personality)
+                        }
+                        
+                        if let hobbies = entity.hobbies, !hobbies.isEmpty {
+                            InfoRow(icon: "paintbrush.fill", label: "爱好", value: hobbies)
+                        }
+                    }
+                }
+                .padding()
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color(.systemBackground))
+                .cornerRadius(16)
+                .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
+            } else {
+                // 空状态 - 引导编辑
+                VStack(spacing: 12) {
+                    Image(systemName: "person.crop.circle.badge.plus")
+                        .font(.system(size: 40))
+                        .foregroundColor(.pink)
+                    
+                    Text("完善对象资料")
+                        .font(.headline)
+                    
+                    Text("添加关系、生日、性格等信息，让 AI 生成更个性化的内容")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                    
+                    Label("开始编辑", systemImage: "arrow.right.circle.fill")
+                        .font(.subheadline.bold())
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 10)
+                        .background(Color.pink.gradient)
+                        .cornerRadius(20)
+                }
+                .padding()
+                .frame(maxWidth: .infinity)
+                .background(Color(.systemBackground))
+                .cornerRadius(16)
+                .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
+            }
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Info Row
+struct InfoRow: View {
+    let icon: String
+    let label: String
+    let value: String
+    
+    var body: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: icon)
+                .font(.caption)
+                .foregroundColor(.pink)
+                .frame(width: 20)
+            
+            Text(label)
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .frame(width: 50, alignment: .leading)
+            
+            Text(value)
+                .font(.caption)
+                .foregroundColor(.primary)
+                .lineLimit(2)
+            
+            Spacer()
+        }
+    }
+}
+
 // MARK: - Toolbar Button
 struct ToolbarButton: View {
     let icon: String
@@ -391,15 +509,24 @@ struct SubjectLargeImageView: View {
     var body: some View {
         Group {
             if let image = image {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFit()
+                ZStack {
+                    // 阴影层
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFit()
+                        .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 10)
+                    
+                    // 主图像
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFit()
+                }
             } else {
                 ProgressView()
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.black)
+        .background(Color.clear)
         .task {
             image = FileManager.loadImage(relativePath: subject.stickerPath, specId: specId)
         }
